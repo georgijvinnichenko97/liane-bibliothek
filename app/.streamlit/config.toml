@@ -1,0 +1,25 @@
+# Aussehen der App (Version 2): hell, ruhig, mit Karten
+#   Grundfarben hier, alles Weitere (Karten, Kennzahlen, Reiter-Leiste,
+#   Schatten, Überschriften) steht im CSS in design.py.
+#   Version 1 bleibt im Dark Mode.
+[theme]
+base = "light"
+primaryColor = "#3056D3"             # Knöpfe, aktiver Reiter, Auswahl (Blau)
+backgroundColor = "#FFFFFF"          # Karten und Tabellen (die Seite selbst ist hellgrau, siehe design.py)
+secondaryBackgroundColor = "#F2F4F8" # Eingabefelder, Code-Kästen
+textColor = "#0F172A"                # Schrift (fast schwarz)
+font = "sans serif"
+
+[server]
+# Version 2 läuft auf Port 8502. Version 1 nutzt den Standard-Port 8501.
+# So können beide Apps gleichzeitig offen sein:
+#   Version 1: http://localhost:8501     Version 2: http://localhost:8502
+port = 8502
+
+[client]
+# Nur das Menü oben rechts, ohne Entwickler-Knöpfe wie "Deploy"
+toolbarMode = "minimal"
+
+[browser]
+# Keine Nutzungsstatistik an Streamlit senden
+gatherUsageStats = false
