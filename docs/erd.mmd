@@ -1,0 +1,63 @@
+erDiagram
+    genres |o--o{ books : "ordnet ein"
+    publishers |o--o{ books : "verlegt"
+    books ||--|{ book_authors : "hat"
+    authors ||--o{ book_authors : "schreibt"
+    books ||--o{ loans : "wird verliehen in"
+    friends ||--o{ loans : "leiht aus in"
+
+    genres {
+        INT genre_id PK
+        VARCHAR(50) genre_name UK "NOT NULL"
+    }
+    publishers {
+        INT publisher_id PK
+        VARCHAR(100) publisher_name UK "NOT NULL"
+        VARCHAR(100) city
+    }
+    authors {
+        INT author_id PK
+        VARCHAR(100) first_name
+        VARCHAR(100) last_name "NOT NULL"
+    }
+    books {
+        INT book_id PK
+        VARCHAR(13) isbn UK "CHECK Format"
+        VARCHAR(255) title "NOT NULL"
+        INT genre_id FK
+        INT publisher_id FK
+        SMALLINT first_published "CHECK 1450-2100"
+        CHAR(2) language_code "DEFAULT de"
+        TINYINT(1) is_lendable "DEFAULT 1"
+        TEXT notes
+        DATE added_on "DEFAULT heute"
+    }
+    book_authors {
+        INT book_id PK, FK
+        INT author_id PK, FK
+        TINYINT author_order "DEFAULT 1"
+    }
+    friends {
+        INT friend_id PK
+        VARCHAR(100) first_name "NOT NULL"
+        VARCHAR(100) last_name "NOT NULL"
+        VARCHAR(255) email UK "E-Mail oder Telefon"
+        VARCHAR(30) phone
+        VARCHAR(150) street
+        VARCHAR(10) postal_code
+        VARCHAR(100) city
+        VARCHAR(20) relationship "CHECK 5 Werte"
+        TINYINT max_loans "DEFAULT 3"
+        TEXT notes
+        TIMESTAMP created_at
+    }
+    loans {
+        INT loan_id PK
+        INT book_id FK "NOT NULL"
+        INT friend_id FK "NOT NULL"
+        DATE loan_date "DEFAULT heute"
+        DATE due_date "NOT NULL"
+        DATE return_date "NULL = noch weg"
+        VARCHAR(255) notes
+        INT open_book_id UK "berechnet"
+    }

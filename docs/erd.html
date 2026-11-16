@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>ER-Diagramm – Bibliothek für Liane</title>
+<style>
+  :root {
+    --ink: #1f2933; --quiet: #616e7c; --line: #52606d; --border: #9aa5b1;
+    --head: #2f5d8a; --head-ink: #ffffff; --row-alt: #f5f7fa; --pk: #b7791f; --fk: #2f855a; --uk: #6b46c1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ffffff; font-family: "DejaVu Sans", "Segoe UI", Arial, sans-serif; color: var(--ink); }
+  #canvas { position: relative; width: 1640px; height: 700px; }
+  h1 { position: absolute; left: 40px; top: 18px; margin: 0; font-size: 24px; font-weight: 700; }
+  .sub { position: absolute; left: 40px; top: 54px; font-size: 14px; color: var(--quiet); }
+  .tbl { position: absolute; border: 1.5px solid var(--border); border-radius: 8px; background: #fff; overflow: hidden;
+         box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .tbl .hd { background: var(--head); color: var(--head-ink); font-weight: 700; font-size: 15px; padding: 8px 12px; height: 36px; }
+  .tbl .hd small { font-weight: 400; opacity: .85; margin-left: 6px; font-size: 12px; }
+  .row { display: flex; align-items: center; height: 28px; padding: 0 10px; font-size: 13px; border-top: 1px solid #e4e7eb; }
+  .row:nth-child(odd) { background: var(--row-alt); }
+  .row .nm { flex: 1; white-space: nowrap; }
+  .row .ty { color: var(--quiet); font-size: 12px; margin-left: 8px; white-space: nowrap; }
+  .row .bd { flex-shrink: 0; display: inline-block; width: 26px; text-align: center; font-size: 10px; font-weight: 700; border-radius: 3px;
+             padding: 1px 0; margin-right: 6px; color: #fff; }
+  .bd.pk { background: var(--pk); } .bd.fk { background: var(--fk); } .bd.uk { background: var(--uk); } .bd.nn { background: #7b8794; }
+  .bd.none { background: transparent; }
+  .row.key .nm { font-weight: 700; }
+  svg#links { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .legend { position: absolute; left: 40px; top: 860px; font-size: 13px; color: var(--quiet); line-height: 1.7; }
+  .legend b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div id="canvas">
+  <h1>ER-Diagramm: Bibliotheksverwaltung für Liane</h1>
+  <div class="sub">Datenbank liane_library_v2 · MySQL 8 · 7 Tabellen in 3. Normalform</div>
+  <svg id="links" width="1640" height="700"></svg>
+</div>
+<script>
+const tables = {
+  genres:      { x: 40,   y: 110, w: 300, cols: [["genre_id","INT","pk"],["genre_name","VARCHAR(50)","uk nn"]] },
+  publishers:  { x: 40,   y: 250, w: 300, cols: [["publisher_id","INT","pk"],["publisher_name","VARCHAR(100)","uk nn"],["city","VARCHAR(100)",""]] },
+  authors:     { x: 40,   y: 530, w: 300, cols: [["author_id","INT","pk"],["first_name","VARCHAR(100)",""],["last_name","VARCHAR(100)","nn"]] },
+  books:       { x: 430,  y: 110, w: 330, cols: [["book_id","INT","pk"],["isbn","VARCHAR(13)","uk"],["title","VARCHAR(255)","nn"],
+                 ["genre_id","INT","fk"],["publisher_id","INT","fk"],["first_published","SMALLINT",""],["language_code","CHAR(2)","nn"],
+                 ["is_lendable","TINYINT(1)","nn"],["notes","TEXT",""],["added_on","DATE","nn"]] },
+  book_authors:{ x: 430,  y: 530, w: 330, cols: [["book_id","INT","pk fk"],["author_id","INT","pk fk"],["author_order","TINYINT UNSIGNED","nn"]] },
+  loans:       { x: 860,  y: 110, w: 330, cols: [["loan_id","INT","pk"],["book_id","INT","fk nn"],["friend_id","INT","fk nn"],["loan_date","DATE","nn"],
+                 ["due_date","DATE","nn"],["return_date","DATE",""],["notes","VARCHAR(255)",""],["open_book_id","INT (berechnet)","uk"]] },
+  friends:     { x: 1280, y: 110, w: 310, cols: [["friend_id","INT","pk"],["first_name","VARCHAR(100)","nn"],["last_name","VARCHAR(100)","nn"],
+                 ["email","VARCHAR(255)","uk"],["phone","VARCHAR(30)",""],["street","VARCHAR(150)",""],["postal_code","VARCHAR(10)",""],
+                 ["city","VARCHAR(100)",""],["relationship","VARCHAR(20)","nn"],["max_loans","TINYINT UNSIGNED","nn"],["notes","TEXT",""],["created_at","TIMESTAMP","nn"]] },
+};
+const canvas = document.getElementById('canvas');
+const HEAD = 36, ROW = 28;
+for (const [name, t] of Object.entries(tables)) {
+  const el = document.createElement('div');
+  el.className = 'tbl';
+  el.style.left = t.x + 'px'; el.style.top = t.y + 'px'; el.style.width = t.w + 'px';
+  el.innerHTML = `<div class="hd">${name}</div>` + t.cols.map(([c, ty, k]) => {
+    const badges = k ? k.split(' ').map(b => `<span class="bd ${b}">${b.toUpperCase()}</span>`).join('') : '<span class="bd none"></span>';
+    return `<div class="row ${k.includes('pk') ? 'key' : ''}">${badges}<span class="nm">${c}</span><span class="ty">${ty}</span></div>`;
+  }).join('');
+  canvas.appendChild(el);
+  t.h = HEAD + t.cols.length * ROW + 1;
+}
+const rowY = (t, col) => { const i = tables[t].cols.findIndex(c => c[0] === col); return tables[t].y + HEAD + i * ROW + ROW / 2 + 1; };
+const left = t => tables[t].x, right = t => tables[t].x + tables[t].w;
+const top_ = t => tables[t].y, bottom = t => tables[t].y + tables[t].h;
+
+const svg = document.getElementById('links');
+const NS = 'http://www.w3.org/2000/svg';
+const add = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+const stroke = { stroke: '#52606d', 'stroke-width': 1.6, fill: 'none' };
+
+// Endsymbole (Krähenfuß-Notation). (x,y) = Punkt auf der Tabellenkante, (dx,dy) = Richtung von der Tabelle weg
+function bar(x, y, dx, dy, d) { const px = -dy, py = dx; add('line', { x1: x + dx*d + px*8, y1: y + dy*d + py*8, x2: x + dx*d - px*8, y2: y + dy*d - py*8, ...stroke }); }
+function circle(x, y, dx, dy, d) { add('circle', { cx: x + dx*d, cy: y + dy*d, r: 5, fill: '#fff', stroke: '#52606d', 'stroke-width': 1.6 }); }
+function crow(x, y, dx, dy) { const px = -dy, py = dx, tx = x + dx*16, ty = y + dy*16;
+  add('line', { x1: tx, y1: ty, x2: x + px*9, y2: y + py*9, ...stroke });
+  add('line', { x1: tx, y1: ty, x2: x, y2: y, ...stroke });
+  add('line', { x1: tx, y1: ty, x2: x - px*9, y2: y - py*9, ...stroke }); }
+const ends = {
+  one:      (x,y,dx,dy) => { bar(x,y,dx,dy,8); bar(x,y,dx,dy,14); },        // genau eins  ||
+  zeroOne:  (x,y,dx,dy) => { bar(x,y,dx,dy,8); circle(x,y,dx,dy,20); },     // null oder eins  |o
+  many:     (x,y,dx,dy) => { crow(x,y,dx,dy); circle(x,y,dx,dy,23); },      // null bis viele  o<
+  oneMany:  (x,y,dx,dy) => { crow(x,y,dx,dy); bar(x,y,dx,dy,21); },         // eins bis viele  |<
+};
+function label(x, y, text, anchor = 'middle') {
+  const t = add('text', { x, y, 'font-size': 12, fill: '#616e7c', 'text-anchor': anchor, 'font-family': 'DejaVu Sans, Arial' });
+  t.textContent = text;
+}
+// horizontale Verbindung mit Knick
+function link(a, b, x1, y1, x2, y2, endA, endB, midX, text, textY) {
+  const dir = x2 > x1 ? 1 : -1;
+  add('path', { d: `M${x1} ${y1} H${midX} V${y2} H${x2}`, ...stroke });
+  ends[endA](x1, y1, dir, 0);
+  ends[endB](x2, y2, -dir, 0);
+  if (text) label(midX, textY ?? (Math.min(y1, y2) + Math.abs(y2 - y1) / 2), text);
+}
+// 1) genres 0..1 -- 0..n books
+link('genres','books', right('genres'), rowY('genres','genre_id'), left('books'), rowY('books','genre_id'), 'zeroOne', 'many', 375, 'ordnet ein', rowY('genres','genre_id') - 10);
+// 2) publishers 0..1 -- 0..n books
+link('publishers','books', right('publishers'), rowY('publishers','publisher_id'), left('books'), rowY('books','publisher_id'), 'zeroOne', 'many', 395, 'verlegt', rowY('publishers','publisher_id') + 18);
+// 3) authors 1 -- 0..n book_authors
+link('authors','book_authors', right('authors'), rowY('authors','author_id'), left('book_authors'), rowY('book_authors','author_id'), 'one', 'many', 385, 'schreibt', rowY('authors','author_id') - 8);
+// 4) books 1 -- 1..n book_authors (senkrecht)
+{ const x = left('books') + 165, y1 = bottom('books'), y2 = top_('book_authors');
+  add('path', { d: `M${x} ${y1} V${y2}`, ...stroke }); ends.one(x, y1, 0, 1); ends.oneMany(x, y2, 0, -1); label(x + 10, (y1 + y2) / 2 + 4, 'hat Autor(en)', 'start'); }
+// 5) books 1 -- 0..n loans
+link('books','loans', right('books'), rowY('books','book_id'), left('loans'), rowY('loans','book_id'), 'one', 'many', 810, 'wird verliehen', rowY('books','book_id') - 8);
+// 6) friends 1 -- 0..n loans
+link('friends','loans', left('friends'), rowY('friends','friend_id'), right('loans'), rowY('loans','friend_id'), 'one', 'many', 1235, 'leiht aus', rowY('friends','friend_id') - 8);
+</script>
+<div class="legend" style="position:absolute;left:860px;top:530px;width:740px">
+  <b>Legende</b><br>
+  <span class="bd pk" style="display:inline-block;width:26px;text-align:center;font-size:10px;font-weight:700;color:#fff;border-radius:3px;background:#b7791f">PK</span> Primärschlüssel ·
+  <span class="bd fk" style="display:inline-block;width:26px;text-align:center;font-size:10px;font-weight:700;color:#fff;border-radius:3px;background:#2f855a">FK</span> Fremdschlüssel ·
+  <span class="bd uk" style="display:inline-block;width:26px;text-align:center;font-size:10px;font-weight:700;color:#fff;border-radius:3px;background:#6b46c1">UK</span> eindeutig (UNIQUE) ·
+  <span class="bd nn" style="display:inline-block;width:26px;text-align:center;font-size:10px;font-weight:700;color:#fff;border-radius:3px;background:#7b8794">NN</span> Pflichtfeld (NOT NULL)<br>
+  <b>Krähenfuß-Notation:</b> ‖ genau eins · |○ null oder eins · ○&lt; null bis viele · |&lt; eins bis viele<br>
+  <b>Beziehungen:</b> Ein Buch hat 0–1 Genre und 0–1 Verlag. Buch und Autor sind n:m verbunden (über book_authors).<br>
+  Ein Buch und ein Ausleiher haben je 0 bis viele Ausleihen (loans). Pro Buch ist höchstens eine Ausleihe offen<br>
+  (UNIQUE auf open_book_id).
+</div>
+</body>
+</html>
