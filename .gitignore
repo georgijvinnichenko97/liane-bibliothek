@@ -1,0 +1,6 @@
+# Python-Zwischendateien
+__pycache__/
+*.pyc
+
+# Streamlit-Geheimnisse (falls jemand welche anlegt)
+.streamlit/secrets.toml
